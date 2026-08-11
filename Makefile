@@ -1,4 +1,5 @@
-.PHONY: help install lint format format-check typecheck test precommit precommit-run check run clean
+.PHONY: help install lint format format-check typecheck test precommit precommit-run check run clean \
+	docker-build docker-up docker-down docker-clean
 
 help:
 	@echo "install        Install/sync dependencies (uv sync)"
@@ -12,6 +13,10 @@ help:
 	@echo "check          precommit-run + test (mirrors CI exactly)"
 	@echo "run            Run the FastAPI dev server (reload enabled)"
 	@echo "clean          Remove caches and build artifacts"
+	@echo "docker-build   Build the dev container image"
+	@echo "docker-up      Start the dev container (foreground, reload enabled)"
+	@echo "docker-down    Stop and remove the dev container"
+	@echo "docker-clean   docker-down plus remove volumes/orphans"
 
 install:
 	uv sync
@@ -45,3 +50,15 @@ run:
 clean:
 	rm -rf .pytest_cache .mypy_cache .ruff_cache .coverage htmlcov dist build *.egg-info
 	find . -type d -name "__pycache__" -exec rm -rf {} +
+
+docker-build:
+	docker compose build
+
+docker-up:
+	docker compose up --build
+
+docker-down:
+	docker compose down
+
+docker-clean:
+	docker compose down --volumes --remove-orphans

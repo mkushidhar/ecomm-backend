@@ -20,6 +20,13 @@ wheels/
 .coverage
 htmlcov/
 
+#tooling
+.pre-commit-config.yaml
+
+#git
+.gitignore
+.github
+
 #database
 *.db
 
@@ -29,5 +36,3 @@ docker-compose.yaml
 .dockerignore
 
 Makefile
-.pre-commit-config.yaml
-.gitignore
