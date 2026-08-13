@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ecomm.database import get_db
+from ecomm.core.database import get_db
 
 router = APIRouter(prefix="/api/v1")
 DbSession = Annotated[AsyncSession, Depends(get_db)]
