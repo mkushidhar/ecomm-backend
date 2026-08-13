@@ -1,0 +1,65 @@
+Alembic migrations for ecomm-backend
+=====================================
+
+Config: `pyproject.toml` (`[tool.alembic]`) + `alembic.ini` (logging only).
+Async SQLAlchemy engine (`mysql+asyncmy`) — handled by `env.py`, nothing to
+think about day to day. DB URL comes from `ecomm.core.config.settings`, same
+as the app.
+
+Commands (all via `make`, from repo root)
+------------------------------------------
+
+| Command                    | What it does                                   |
+|----------------------------|-------------------------------------------------|
+| `make migrate`             | Apply all pending migrations                    |
+| `make migration name="…"`  | Autogenerate a revision from model changes       |
+| `make migrate-down`        | Revert the last migration                        |
+| `make migrate-history`     | Show revision chain                              |
+| `make migrate-check`       | Fail if models and migrations have drifted       |
+| `make docker-migrate`      | Same as `make migrate`, inside the `app` container |
+
+Raw `alembic` commands (equivalent, for when `make` doesn't cover it)
+-----------------------------------------------------------------------
+
+| Command                                              | What it does                              |
+|-------------------------------------------------------|--------------------------------------------|
+| `uv run alembic upgrade head`                          | Apply all pending migrations              |
+| `uv run alembic revision --autogenerate -m "…"`        | Autogenerate a revision from model changes |
+| `uv run alembic revision -m "…"`                       | Blank revision (hand-write upgrade/downgrade) |
+| `uv run alembic downgrade -1`                          | Revert the last migration                 |
+| `uv run alembic downgrade <revision>`                  | Revert down to a specific revision        |
+| `uv run alembic upgrade <revision>`                    | Upgrade to a specific revision            |
+| `uv run alembic history --verbose`                     | Show revision chain                       |
+| `uv run alembic current`                                | Show the revision currently applied       |
+| `uv run alembic check`                                  | Fail if models and migrations have drifted |
+| `uv run alembic upgrade head --sql`                     | Print the SQL instead of running it       |
+
+Workflow
+--------
+
+**Fresh DB:**
+```bash
+docker compose up -d db
+make migrate
+```
+
+**Changed/added a model:**
+1. Edit the model.
+2. New feature package? Add its `models.py` import to `migrations/env.py`
+   (next to `from ecomm.products.models import Product`) — Alembic only sees
+   tables whose module has been imported.
+3. `make migration name="add sku to products"`
+4. Read the generated file in `migrations/versions/` before committing —
+   autogenerate doesn't reliably catch renames or data backfills.
+5. `make migrate` to apply, `make migrate-check` to confirm no drift.
+6. Commit the model change and its migration together.
+
+Notes
+-----
+
+- Migrations never run automatically on container start — always an explicit
+  step (`make migrate` / `make docker-migrate`), to avoid multiple containers
+  racing to apply them.
+- Running locally against the compose `db` service (not `make docker-migrate`):
+  `DB_HOST=127.0.0.1 make migrate` — don't change `.env`'s `DB_HOST`
+  permanently, the `app` container needs it set to `db`.

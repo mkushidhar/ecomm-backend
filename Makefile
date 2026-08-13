@@ -1,5 +1,6 @@
 .PHONY: help install lint format format-check typecheck test precommit precommit-run check run clean \
-	docker-build docker-up docker-down docker-clean
+	docker-build docker-up docker-down docker-clean \
+	migrate migrate-down migration migrate-history migrate-check docker-migrate
 
 help:
 	@echo "install        Install/sync dependencies (uv sync)"
@@ -17,6 +18,12 @@ help:
 	@echo "docker-up      Start the dev container (foreground, reload enabled)"
 	@echo "docker-down    Stop and remove the dev container"
 	@echo "docker-clean   docker-down plus remove volumes/orphans"
+	@echo "migrate         Apply all pending migrations (alembic upgrade head)"
+	@echo "migrate-down    Revert the last applied migration (alembic downgrade -1)"
+	@echo "migration       Autogenerate a new revision; usage: make migration name=\"add foo\""
+	@echo "migrate-history Show migration history"
+	@echo "migrate-check   Fail if models and latest migration have drifted (alembic check)"
+	@echo "docker-migrate  Apply migrations against the docker compose db service"
 
 install:
 	uv sync
@@ -62,3 +69,22 @@ docker-down:
 
 docker-clean:
 	docker compose down --volumes --remove-orphans
+
+migrate:
+	uv run alembic upgrade head
+
+migrate-down:
+	uv run alembic downgrade -1
+
+migration:
+	@if [ -z "$(name)" ]; then echo "Usage: make migration name=\"description\""; exit 1; fi
+	uv run alembic revision --autogenerate -m "$(name)"
+
+migrate-history:
+	uv run alembic history --verbose
+
+migrate-check:
+	uv run alembic check
+
+docker-migrate:
+	docker compose run --rm app uv run alembic upgrade head
