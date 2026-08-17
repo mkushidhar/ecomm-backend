@@ -1,18 +1,18 @@
 import time
-from typing import Annotated
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter
 from sqlalchemy import text
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from ecomm.core.database import get_db
+from ecomm.core.database import DbConn
 
-router = APIRouter(prefix="/api/v1")
-DbSession = Annotated[AsyncSession, Depends(get_db)]
+router = APIRouter(
+    prefix="/api/v1",
+    tags=["health"],
+)
 
 
 @router.get("/health")
-async def health(db: DbSession) -> dict[str, str | dict[str, str | float]]:
+async def health(db: DbConn) -> dict[str, str | dict[str, str | float]]:
 
     db_status = "ok"
     start = time.perf_counter()

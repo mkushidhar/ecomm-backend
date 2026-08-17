@@ -35,7 +35,7 @@ Migrations: `make migration name="add foo"` (autogenerate), `make migrate` (upgr
 ## Alembic layout (non-obvious)
 
 - Alembic config lives in **`pyproject.toml` under `[tool.alembic]`** (new-style, Alembic ≥1.19). `alembic.ini` only carries logging config; its `sqlalchemy.url` placeholder is dead — `migrations/env.py` calls `settings.resolved_database_url` so the app and migrations can never disagree on the DB URL.
-- **A new model must be imported in `migrations/env.py`** to register itself on `Base.metadata`. Otherwise autogenerate sees no table and will happily emit a migration that drops it.
+- **A new model must be imported in `migrations/env.py`** to register itself on `Base.metadata`. Otherwise autogenerate sees no table and will happily emit a migration that drops it. Import it from its own module (`from ecomm.products.models import Product`), never via a package re-export — routing it through `__init__.py` means a later tidy of that file silently empties the metadata, and the resulting migration is a `DROP TABLE`. `make migrate-check` (`alembic check`) catches this, but it is **not** wired into CI (CI has no database service).
 - `env.py` runs online migrations through an async engine (`asyncio.run` → `create_async_engine`) with `compare_type` and `compare_server_default` enabled.
 - Post-write hooks in `pyproject.toml` run `ruff check --fix` and `ruff format` on every generated revision, so generated files come out already conforming.
 
@@ -45,12 +45,13 @@ Migrations: `make migration name="add foo"` (autogenerate), `make migrate` (upgr
 
 - `core/` — shared infrastructure: `config.py` (pydantic-settings singleton `settings`), `base.py` (the single `DeclarativeBase` subclass `Base`), `database.py` (module-level `engine`, `async_session_factory`, and the `get_db` async-generator dependency).
 - `main.py` — creates `app`, includes each feature router.
-- Feature packages (`products/` is the template): `models.py` (SQLAlchemy), `schemas.py` (Pydantic request/response), `<feature>.py` (the `APIRouter`), and `__init__.py` re-exporting the router under a namespaced alias (`product_router`). New features follow this shape and get wired into `main.py`.
+- Feature packages (`products/` is the template) are layered, one role per module: `models.py` (SQLAlchemy), `schemas.py` (Pydantic request/response/query), `repository.py` (data access; holds the `AsyncSession`), `service.py` (orchestration; holds a repository), `deps.py` (wires the two into a `Depends` alias), `router.py` (the `APIRouter`), and `__init__.py` re-exporting *only* the router under a namespaced alias (`product_router`). New features follow this shape and get wired into `main.py`.
 - `health.py` sits at the top level (not yet a package) and owns `/api/v1/health`.
 
 Conventions that recur:
 
-- Routers declare their own DB dependency alias: `DbConn = Annotated[AsyncSession, Depends(get_db)]`.
+- `DbConn = Annotated[AsyncSession, Depends(get_db)]` is declared once, in `core/database.py`, and imported — do not re-declare it per router. Feature packages stack their own alias on top in `deps.py` (`ProductServiceDep = Annotated[ProductService, Depends(get_product_service)]`); routers depend on *that*, not on `DbConn`. Only `health.py` uses `DbConn` directly, because it has no service layer.
+- Literal paths must be registered before parameterized ones — `GET /list` is declared above `GET /{id}` in `products/router.py`, otherwise FastAPI matches `/{id}` first and 422s on `"list"` as a `UUID`.
 - The session factory sets `expire_on_commit=False` and `autoflush=False`, so server-generated values need an explicit `await db.refresh(obj)` after `commit()`.
 - Routes carry explicit return type annotations plus `response_model`/`status_code` — mypy strict means every function is annotated.
 
@@ -60,4 +61,4 @@ Conventions that recur:
 
 ## Known gaps (deliberate, not oversights)
 
-No service/repository layer — routers hold controller + persistence logic inline. No global exception handlers, no try/except around commits, and no logging setup anywhere in the app.
+No global exception handlers, no try/except around commits, and no logging setup anywhere in the app. `health.py` is still a top-level module rather than a package, and reaches for the session directly instead of going through a service.
