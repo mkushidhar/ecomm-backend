@@ -5,7 +5,10 @@ from sqlalchemy import text
 
 from ecomm.core.database import DbConn
 
-router = APIRouter(prefix="/api/v1")
+router = APIRouter(
+    prefix="/api/v1",
+    tags=["health"],
+)
 
 
 @router.get("/health")
