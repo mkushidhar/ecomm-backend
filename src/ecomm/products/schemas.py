@@ -8,7 +8,12 @@ class ProductCreate(BaseModel):
     description: str = Field(min_length=20)
 
 
-class ProductCreateResponse(BaseModel):
+class ProductResponse(BaseModel):
     id: UUID
     name: str
     description: str
+
+
+class ProductListParams(BaseModel):
+    skip: int = Field(default=0, ge=0)
+    limit: int = Field(default=10, ge=1, le=100)
