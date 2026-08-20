@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 
-from ecomm.health import router as health_router
+from ecomm.health import health_router
 from ecomm.products import product_router
 
 app = FastAPI(title="e-comm")
