@@ -8,7 +8,7 @@ from .models import Product
 from .schemas import ProductCreate, ProductListParams, ProductResponse
 
 router = APIRouter(
-    prefix="/api/v1/product",
+    prefix="/api/v1/products",
     tags=["Product"],
 )
 

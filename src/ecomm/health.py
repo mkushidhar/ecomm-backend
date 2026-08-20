@@ -7,7 +7,7 @@ from ecomm.core.database import DbConn
 
 router = APIRouter(
     prefix="/api/v1",
-    tags=["health"],
+    tags=["Health"],
 )
 
 
