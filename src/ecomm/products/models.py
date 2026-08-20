@@ -1,6 +1,7 @@
+import datetime
 import uuid
 
-from sqlalchemy import String, Text, Uuid
+from sqlalchemy import DateTime, Float, Integer, String, Text, Uuid, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from ecomm.core.base import Base
@@ -21,3 +22,21 @@ class Product(Base):
     )
 
     description: Mapped[str] = mapped_column(Text)
+
+    units: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=0,
+        server_default="0",
+    )
+
+    price: Mapped[float] = mapped_column(
+        Float,
+        nullable=False,
+    )
+
+    created_at: Mapped[datetime.datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    )
